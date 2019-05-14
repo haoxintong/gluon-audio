@@ -104,25 +104,18 @@ class VoxAudioFolderDataset(Dataset):
             self.synsets.append(folder)
             for subfolder in sorted(os.listdir(path)):
                 subpath = os.path.join(path, subfolder)
-                if subpath.lower().endswith(".wav"):
-                    ext = os.path.splitext(subpath)[1]
+
+                if not os.path.isdir(subpath):
+                    warnings.warn('Ignoring %s, which is not a directory.' % subpath, stacklevel=3)
+                    continue
+                for filename in sorted(os.listdir(subpath)):
+                    filename = os.path.join(subpath, filename)
+                    ext = os.path.splitext(filename)[1]
                     if ext.lower() not in self._exts:
                         warnings.warn('Ignoring %s of type %s. Only support %s' % (
-                            subpath, ext, ', '.join(self._exts)))
+                            filename, ext, ', '.join(self._exts)))
                         continue
-                    self.items.append((subpath, label))
-                else:
-                    if not os.path.isdir(subpath):
-                        warnings.warn('Ignoring %s, which is not a directory.' % subpath, stacklevel=3)
-                        continue
-                    for filename in sorted(os.listdir(subpath)):
-                        filename = os.path.join(subpath, filename)
-                        ext = os.path.splitext(filename)[1]
-                        if ext.lower() not in self._exts:
-                            warnings.warn('Ignoring %s of type %s. Only support %s' % (
-                                filename, ext, ', '.join(self._exts)))
-                            continue
-                        self.items.append((filename, label))
+                    self.items.append((filename, label))
 
     def __getitem__(self, idx):
         while True:
@@ -179,3 +172,52 @@ class VoxAudioValFolderDataset(Dataset):
 
     def __len__(self):
         return len(self._items)
+
+
+class TIMITDataset(Dataset):
+    def __init__(self, root, is_train=True, sr=16000, min_length=3, transform=None):
+        self._sr = sr
+        self._transform = transform
+        self._min_length = min_length
+        self._exts = ['.wav', '.m4a']
+        _root = os.path.expanduser(root)
+        self._root = os.path.join(_root, 'TRAIN' if is_train else 'TEST')
+        self._list_audios(self._root)
+        self.num_classes = len(self.synsets)
+
+    def _list_audios(self, root):
+        self.synsets = []
+        self.items = []
+
+        for folder_dr in sorted(os.listdir(root)):
+            path = os.path.join(root, folder_dr)
+            if not os.path.isdir(path):
+                warnings.warn('Ignoring %s, which is not a directory.' % path, stacklevel=3)
+                continue
+            for folder_idt in sorted(os.listdir(path)):
+                audio_root = os.path.join(path, folder_idt)
+                if not os.path.isdir(audio_root):
+                    warnings.warn('Ignoring %s, which is not a directory.' % path, stacklevel=3)
+                    continue
+                label = len(self.synsets)
+                self.synsets.append(folder_idt)
+                for fn in sorted(os.listdir(audio_root)) :
+                    sound_fp = os.path.join(audio_root, fn)
+                    ext = os.path.splitext(sound_fp)[-1]
+                    if ext.lower() not in self._exts:
+                        continue
+                    self.items.append((sound_fp, label))
+
+    def __getitem__(self, idx):
+        while True:
+            audio = _load(self.items[idx][0])
+            if audio.shape[0] < self._sr * self._min_length:
+                idx = np.random.randint(low=0, high=len(self))
+                continue
+            label = self.items[idx][1]
+            if self._transform is not None:
+                return self._transform(audio, label)
+            return audio, label
+
+    def __len__(self):
+        return len(self.items)
