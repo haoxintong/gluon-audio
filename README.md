@@ -10,15 +10,49 @@ GluonAR is based on MXnet-Gluon, if you are new to it, please check out [dmlc 60
 已经实现的feature:
 - 使用ffmpeg的pythonic binding `av`和`librosa`做audio数据读取
 - 模块支持`Hybridize()`. forward阶段不使用pysound, librosa, scipy, 效率更高, 提供快速训练和end-to-end部署的能力, 包括:
-    - 基于`nd.contrib.fft`的短时傅里叶变换(`STFTBlock`) 
-    - z-score block
+    - 基于`nd.contrib.fft`的短时傅里叶变换(`STFTBlock`)和z-score block, 相比使用numpy和scipy预处理后载入GPU训练效率提高12%.
     - [1808.00158](https://arxiv.org/abs/1808.00158)中提出的`SincBlock`
 - gluon风格的VOX数据集载入
 - 类似人脸验证的Speaker Verification
 - 使用频谱图训练声纹特征的例子, 在VOX1上的1:1验证acc: 0.941152+-0.004926
 
+example:
+```python
+import numpy as np
+import mxnet as mx
+import librosa as rosa
+from gluonar.utils.viz import view_spec
+from gluonar.nn.basic_blocks import STFTBlock
+
+stft = STFTBlock(2.24)
+stft.initialize(ctx=mx.gpu())
+
+data = rosa.load(r"resources/speaker_recognition/speaker0_0.m4a", sr=16000)[0]
+nd_data = mx.nd.array([data[:int(2.24 * 16000)]], ctx=mx.gpu())
+
+# forward
+ret = stft(nd_data).asnumpy()[0][0]
+spec = np.transpose(ret, (1, 0))
+view_spec(spec)
+
+# stft in librosa, parameters here is set as described in [1806.05622] 
+spec = rosa.stft(data[:int(2.24 * 16000)], n_fft=600, hop_length=160, win_length=400, window="hamming")
+spec = np.abs(spec) ** 2
+view_spec(spec)
+```
+输出:
+
+|STFTBlock| STFT in librosa |
+|:---:|:---:|
+|<img src="resources/spectrogram.png"/>|<img src="resources/lib_rosaspectrogram.png"/>|
+
+更多的例子请参考`examples/`.
+
 ## Requirements
 mxnet-1.5.0+, gluonfr, av, librosa, ...
+
+音频库的选择主要考虑数据读取速度, 训练过程中音频的解码相比图像解码会消耗更多时间, 实际测试librosa从磁盘加载一个aac编码的短音频
+耗时是pyav的8倍左右. 
 
 - librosa  
     `pip install librosa`
@@ -33,6 +67,7 @@ mxnet-1.5.0+, gluonfr, av, librosa, ...
     `pip install av`
 - gluonfr  
     `pip install git+https://github.com/THUFutureLab/gluon-face.git@master`
+    
 ## Datasets
 ### TIMIT
 The DARPA TIMIT Acoustic-Phonetic Continuous Speech Corpus (TIMIT) Training and Test Data.
@@ -46,7 +81,9 @@ VoxCeleb is an audio-visual dataset consisting of short clips of human speech, e
 For more information, checkout this [page](http://www.robots.ox.ac.uk/~vgg/data/voxceleb/).
 
 ## Pretrained Models
-To be continued.
+### Speaker Recognition
+- ResNet18 training with VoxCeleb: [Baidu](https://pan.baidu.com/s/1Gkhi67oJSiSyAiYNTdPlTw), 
+[Google Drive](https://drive.google.com/open?id=1oEvSQrnNwYL4pRyQ8t87hRP3m22wuePz)
 
 ## TODO
 接下来会慢慢补全使用mxnet gluon训练说话人识别的工具链, 预计会花超长时间. 
