@@ -19,7 +19,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""A demo for speaker verification."""
+"""A demo for speaker recognition."""
 from av import container
 import numpy as np
 import mxnet as mx
@@ -90,16 +90,17 @@ class SpeakerVerification:
 
 if __name__ == '__main__':
     import os
+    from os.path import join as opj
 
-    root = os.path.join(os.path.dirname(__file__), "../..")
-    demo_data = {"speaker0_0": os.path.join(root, "resources/verification/speaker0_0.m4a"),
-                 "speaker0_1": os.path.join(root, "resources/verification/speaker0_1.m4a"),
-                 "speaker1_0": os.path.join(root, "resources/verification/speaker1_0.m4a"),
-                 "speaker1_1": os.path.join(root, "resources/verification/speaker1_1.m4a")}
+    root = opj(os.path.dirname(__file__), "../..")
+    demo_data = {"speaker0_0": opj(root, "resources/speaker_recognition/speaker0_0.m4a"),
+                 "speaker0_1": opj(root, "resources/speaker_recognition/speaker0_1.m4a"),
+                 "speaker1_0": opj(root, "resources/speaker_recognition/speaker1_0.m4a"),
+                 "speaker1_1": opj(root, "resources/speaker_recognition/speaker1_1.m4a")}
 
     demo = SpeakerVerification(1.0,
-                               os.path.join(root, "models/vox-res18-symbol.json"),
-                               os.path.join(root, "models/vox-res18-0000.params"))
+                               opj(root, "models/speaker_recognition/vox-res18-symbol.json"),
+                               opj(root, "models/speaker_recognition/vox-res18-0000.params"))
 
     for k, p0 in demo_data.items():
         print(k, "\t", end=" ")
