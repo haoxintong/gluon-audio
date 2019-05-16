@@ -7,11 +7,12 @@ GluonAR is based on MXnet-Gluon, if you are new to it, please check out [dmlc 60
   
 虽然名字叫GluonAR, 但是目前以及可以预见的时间内只有Text-Independent Speaker Recognition的内容.
 
-已经实现的feature(一些实现依赖mxnet版本, 目前仍不稳定):
-- 使用ffmpeg的封装库`av`和`librosa`做audio数据读取
-- 基于`nd.contrib.fft`的短时傅里叶变换(`STFTBlock`) 
-- z-score block
-- [1808.00158](https://arxiv.org/abs/1808.00158)中提出的`SincBlock`
+已经实现的feature:
+- 使用ffmpeg的pythonic binding `av`和`librosa`做audio数据读取
+- 模块支持`Hybridize()`. forward阶段不使用pysound, librosa, scipy, 效率更高, 提供快速训练和end-to-end部署的能力, 包括:
+    - 基于`nd.contrib.fft`的短时傅里叶变换(`STFTBlock`) 
+    - z-score block
+    - [1808.00158](https://arxiv.org/abs/1808.00158)中提出的`SincBlock`
 - gluon风格的VOX数据集载入
 - 类似人脸验证的Speaker Verification
 - 使用频谱图训练声纹特征的例子, 在VOX1上的1:1验证acc: 0.941152+-0.004926
@@ -23,12 +24,12 @@ mxnet-1.5.0+, gluonfr, av, librosa, ...
     `pip install librosa`
 - ffmpeg  
     ```
-    # 先下载ffmpeg源码, 进入根目录
+    # 下载ffmpeg源码, 进入根目录
     ./configure --extra-cflags=-fPIC --enable-shared
     make -j
     sudo make install
     ```
-- pyav, 需要先安装ffmpeg, 然后通过pip安装  
+- pyav, 需要先安装ffmpeg  
     `pip install av`
 - gluonfr  
     `pip install git+https://github.com/THUFutureLab/gluon-face.git@master`
