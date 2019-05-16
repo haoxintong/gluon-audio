@@ -44,7 +44,7 @@ view_spec(spec)
 
 |STFTBlock| STFT in librosa |
 |:---:|:---:|
-|<img src="resources/spectrogram.png"/>|<img src="resources/lib_rosaspectrogram.png"/>|
+|<img src="resources/spectrogram.png"/>|<img src="resources/librosa_spectrogram.png"/>|
 
 更多的例子请参考`examples/`.
 
