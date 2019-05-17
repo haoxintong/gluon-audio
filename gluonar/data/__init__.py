@@ -22,3 +22,4 @@
 """This module provides popular audio recognition datasets."""
 
 from .dataset import *
+from .transform import *
