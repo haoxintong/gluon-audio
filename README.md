@@ -87,7 +87,7 @@ Download: [Baidu](https://pan.baidu.com/s/1Gkhi67oJSiSyAiYNTdPlTw),
 [Google Drive](https://drive.google.com/open?id=1oEvSQrnNwYL4pRyQ8t87hRP3m22wuePz)
 
 I followed the ideas in paper **VoxCeleb2** [1806.05622](https://arxiv.org/abs/1806.05622)  to train this model, 
-the differences between them is:
+the differences between them:
 
 |-|Res18 in this repo|Res34 in paper|
 |:---|:---:|:---:|
@@ -96,10 +96,7 @@ the differences between them is:
 |Eval on|Random 9500+ pair samples from VoxCeleb1 train and test set |Original VoxCeleb1 test set|
 |Metric|Accuracy:0.932656+-0.005187|EER: 0.0504|
 |Framework|Mxnet Gluon|Matconvnet|
-
-And here is the roc result:  
-<img src="resources/vox_res18_roc.png" width=400/>
- 
+|ROC|<img src="resources/vox_res18_roc.png"/>|-|
 
 ## TODO
 接下来会慢慢补全使用mxnet gluon训练说话人识别的工具链, 预计会花超长时间. 
