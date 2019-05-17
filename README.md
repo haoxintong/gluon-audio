@@ -96,7 +96,7 @@ the differences between them:
 |Eval on|Random 9500+ pair samples from VoxCeleb1 train and test set |Original VoxCeleb1 test set|
 |Metric|Accuracy:0.932656+-0.005187|EER: 0.0504|
 |Framework|Mxnet Gluon|Matconvnet|
-|ROC|<img src="resources/vox_res18_roc.png"/>|-|
+|ROC|<img src="resources/vox_res18_roc.png" width=350/>|-|
 
 ## TODO
 接下来会慢慢补全使用mxnet gluon训练说话人识别的工具链, 预计会花超长时间. 
