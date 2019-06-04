@@ -111,46 +111,73 @@ class STFTBlock(nn.HybridBlock):
 
     Parameters
     ----------
-    sample_rate: int, default is 16k.
-        target sampling rate.
+    audio_length: int.
+        target audio length.
 
     Inputs:
         - **x**: the input audio signal, with shape (batch_size, audio_length).
 
     Outputs:
-        - **specs**: specs tensor with shape (batch_size, 1, num_frames, win_lengths).
-    """
+        - **specs**: specs tensor with shape (batch_size, 1, num_frames, win_lengths/2).
 
-    def __init__(self, audio_duration, sample_rate=16000, n_fft=600,
-                 hop_length=160, win_length=400, window="hamming", **kwargs):
+    Notes:
+        The output shape is calculated by (1+(len(y)-n_fft)/hop_length, win_lengths/2),
+    and different from librosa the output should be transposed before visualization.
+    """
+    def __init__(self, audio_length, n_fft=2048, hop_length=None,
+                 win_length=None, window="hann", center=True, power=1, **kwargs):
         super().__init__(**kwargs)
+
         if win_length is None:
             win_length = n_fft
-        num_frames = 3 + int((audio_duration * sample_rate - win_length) / hop_length)
 
+        if hop_length is None:
+            hop_length = int(win_length // 4)
+        if center:
+            num_frames = 1 + int(audio_length / hop_length)
+        else:
+            num_frames = 1 + int((audio_length - n_fft) / hop_length)
         win = signal.get_window(window, win_length)
         win = np.expand_dims(self.pad_center(win, n_fft), axis=0)
         indices = np.tile(np.arange(0, n_fft), (num_frames, 1)) + np.tile(np.arange(0, num_frames * hop_length,
                                                                                     hop_length), (n_fft, 1)).T
-
+        self._audio_length = int(audio_length)
         self._n_fft = n_fft
         self._win_length = win_length
         self._num_frames = num_frames
-
+        self._power = power
+        self._center = center
         with self.name_scope():
             self.window = self.params.get_constant("window", win)
             self.indices = self.params.get_constant("indices", indices)
 
     def hybrid_forward(self, F, x, window, indices, *args, **kwargs):
-        frames = F.take(x, indices, axis=1, mode="clip")
+        if self._center:
+            frames = self.pad(F, x)
+        else:
+            frames = x
+
+        frames = F.take(frames, indices, axis=1)
         frames = F.broadcast_mul(frames, window)
         frames = F.reshape(frames, shape=(-1, self._n_fft))
+
         specs = F.contrib.fft(frames)
         specs = F.reshape(specs, shape=(-1, self._num_frames, self._n_fft, 2))
-        specs = F.sum(F.square(specs), axis=3)
-        specs = F.expand_dims(specs, axis=1)
-        specs = F.slice(specs, begin=(None, None, None, 0), end=(None, None, None, int(self._n_fft / 2)))
-        return specs
+        specs = F.slice(specs, begin=(None, None, 0, None), end=(None, None, int(self._n_fft / 2), None))
+
+        specs = F.power(self.abs_complex(F, specs, axis=3), self._power)
+        return F.expand_dims(specs, axis=1)
+
+    def pad(self, F, x):
+        """As mxnet nd.pad only support 4D or 5D arrays, it should be reshaped first."""
+        x_4d = F.reshape(x, shape=(1, 1, -1, self._audio_length))
+        x_4d = F.pad(x_4d, mode="reflect", pad_width=(0, 0, 0, 0, 0, 0, int(self._n_fft // 2), int(self._n_fft // 2)))
+        return F.reshape(x_4d, shape=(-1, self._audio_length + int(self._n_fft // 2 * 2)))
+
+    @staticmethod
+    def abs_complex(F, x, axis):
+        """Calculate the absolute value element-wise along given axis."""
+        return F.sqrt(F.sum(F.square(x), axis=axis))
 
     @staticmethod
     def pad_center(data, size, axis=-1, **kwargs):
@@ -179,9 +206,7 @@ class STFTBlock(nn.HybridBlock):
 
 
 class ZScoreNormBlock(nn.HybridBlock):
-    """Zero Score Normalization Block
-
-    """
+    """Zero Score Normalization Block"""
     def __init__(self, in_channels, in_shapes, **kwargs):
         super().__init__(**kwargs)
         self._in_channels = in_channels
@@ -193,5 +218,5 @@ class ZScoreNormBlock(nn.HybridBlock):
         t = F.reshape(x, (-1, self._in_channels, self._in_h * self._in_w))
         mean = F.mean(t, axis=-1, keepdims=True)
         std = F.sqrt(F.mean(F.square(F.broadcast_sub(t, mean)), axis=-1, keepdims=True))
-        norm_x = F.broadcast_div(F.broadcast_sub(x, F.expand_dims(mean, -1)), F.expand_dims(std+1e-7, -1))
+        norm_x = F.broadcast_div(F.broadcast_sub(x, F.expand_dims(mean, -1)), F.expand_dims(std + 1e-7, -1))
         return norm_x
