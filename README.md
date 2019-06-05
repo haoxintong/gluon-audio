@@ -24,19 +24,19 @@ import librosa as rosa
 from gluonar.utils.viz import view_spec
 from gluonar.nn.basic_blocks import STFTBlock
 
-stft = STFTBlock(2.24)
+data = rosa.load(r"resources/speaker_recognition/speaker0_0.m4a", sr=16000)[0][:35840]
+nd_data = mx.nd.array([data], ctx=mx.gpu())
+
+stft = STFTBlock(35840, hop_length=160, win_length=400)
 stft.initialize(ctx=mx.gpu())
 
-data = rosa.load(r"resources/speaker_recognition/speaker0_0.m4a", sr=16000)[0]
-nd_data = mx.nd.array([data[:int(2.24 * 16000)]], ctx=mx.gpu())
-
-# forward
+# stft block forward
 ret = stft(nd_data).asnumpy()[0][0]
-spec = np.transpose(ret, (1, 0))
+spec = np.transpose(ret, (1, 0)) ** 2
 view_spec(spec)
 
-# stft in librosa, parameters here is set as described in [1806.05622] 
-spec = rosa.stft(data[:int(2.24 * 16000)], n_fft=600, hop_length=160, win_length=400, window="hamming")
+# stft in librosa 
+spec = rosa.stft(data, hop_length=160, win_length=400, window="hamming")
 spec = np.abs(spec) ** 2
 view_spec(spec)
 ```
