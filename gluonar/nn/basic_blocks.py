@@ -24,11 +24,10 @@
 import math
 import numpy as np
 from scipy import signal
-from mxnet import init
+from mxnet import init, nd
 from mxnet.gluon import nn
-from gluonfr.nn import *
 
-__all__ = ['NormDense', 'SELayer', 'FrBase', 'SincConv1D', 'ZScoreNormBlock', 'STFTBlock']
+__all__ = ["SincConv1D", "ZScoreNormBlock", "STFTBlock", "DCT1D", "MelSpectrogram", "MFCC"]
 
 
 class SincConv1D(nn.HybridBlock):
@@ -37,6 +36,7 @@ class SincConv1D(nn.HybridBlock):
     <https://arxiv.org/abs/1808.00158>`_ paper.
 
     """
+
     def __init__(self, channels, kernel_size, sample_rate, dtype='float32', **kwargs):
         super().__init__(**kwargs)
         # self._pi = math.pi
@@ -120,10 +120,12 @@ class STFTBlock(nn.HybridBlock):
     Outputs:
         - **specs**: specs tensor with shape (batch_size, 1, num_frames, win_lengths/2).
 
-    Notes:
-        The output shape is calculated by (1+(len(y)-n_fft)/hop_length, win_lengths/2),
+    Notes
+    -----
+    The output shape is calculated by (1+(len(y)-n_fft)/hop_length, win_lengths/2),
     and different from librosa the output should be transposed before visualization.
     """
+
     def __init__(self, audio_length, n_fft=2048, hop_length=None,
                  win_length=None, window="hann", center=True, power=1, **kwargs):
         super().__init__(**kwargs)
@@ -220,3 +222,85 @@ class ZScoreNormBlock(nn.HybridBlock):
         std = F.sqrt(F.mean(F.square(F.broadcast_sub(t, mean)), axis=-1, keepdims=True))
         norm_x = F.broadcast_div(F.broadcast_sub(x, F.expand_dims(mean, -1)), F.expand_dims(std + 1e-7, -1))
         return norm_x
+
+
+class DCT1D(nn.HybridBlock):
+    """
+    Compute the Discrete Cosine Transform of input data. This block is implemented
+    as scipy.
+
+    `DCT1D`'s behavior is compute dct along last axis for any dimensions larger than 2.
+
+    Parameters
+    ----------
+    mode : {1, 2, 3}, optional
+        Type of the DCT (see Notes). Default type is 2.
+    N : int
+        Length of the transform. The required value is ``N = x.shape[axis]``.
+    axis : int, optional
+        Axis along which the dct is computed; the default is over the
+        last axis (i.e., ``axis=-1``).
+    norm : {None, 'ortho'}, optional
+        Normalization mode (see Notes). Default is None.
+
+    Notes
+    -----
+    **Type II**
+
+    There are several definitions of the DCT-II; use scipy definition following
+    (for ``norm=None``)::
+
+                N-1
+      y[k] = 2* sum x[n]*cos(pi*k*(2n+1)/(2*N)), 0 <= k < N.
+                n=0
+
+    If ``norm='ortho'``, ``y[k]`` is multiplied by a scaling factor `f`::
+
+      f = sqrt(1/(4*N)) if k = 0,
+      f = sqrt(1/(2*N)) otherwise.
+
+    Which makes the corresponding matrix of coefficients orthonormal
+    (``OO' = Id``).
+
+    TODO: implement the norm coef option.
+    """
+
+    def __init__(self, mode=2, N=None, norm=None, **kwargs):
+        super().__init__(**kwargs)
+
+        if mode != 2:
+            raise NotImplementedError("DCT types other than II not yet supported")
+
+        if N is None:
+            raise ValueError("Signal length is required by DCT1D, fill N with it.")
+
+        coef = np.multiply(np.array([(2 * n + 1) / (2 * N) for n in range(N)]).reshape([N, 1]),
+                           np.arange(0, N, 1).reshape([1, N]))
+        coef = np.cos(coef * np.pi)
+
+        self.coef = self.params.get_constant("coef", coef)
+
+    def hybrid_forward(self, F, x, coef, *args, **kwargs):
+        return 2 * F.dot(x, coef)
+
+
+class MFCC(nn.HybridBlock):
+    def __init__(self, sr=16000, n_mfcc=20, dct_type=2, norm='ortho', **kwargs):
+        super().__init__(**kwargs)
+        self.mel_spec = MelSpectrogram()
+        self.dct = DCT1D(type=dct_type, norm=norm)
+        self._n_mfcc = n_mfcc
+
+    def hybrid_forward(self, F, x, *args, **kwargs):
+        x = self.mel_spec(x)
+        x = self.dct(x)
+        return nd.slice()
+
+
+class MelSpectrogram(nn.HybridBlock):
+    def __init__(self, y=None, sr=16000, n_fft=2048, hop_length=512,
+                 power=2.0, **kwargs):
+        super().__init__(**kwargs)
+
+    def hybrid_forward(self, F, x, *args, **kwargs):
+        pass
