@@ -24,6 +24,7 @@
 import math
 import numpy as np
 from scipy import signal
+from librosa import filters
 from mxnet import init, nd
 from mxnet.gluon import nn
 
@@ -127,7 +128,7 @@ class STFTBlock(nn.HybridBlock):
     """
 
     def __init__(self, audio_length, n_fft=2048, hop_length=None,
-                 win_length=None, window="hann", center=True, power=1, **kwargs):
+                 win_length=None, window="hann", center=True, power=1.0, **kwargs):
         super().__init__(**kwargs)
 
         if win_length is None:
@@ -209,6 +210,7 @@ class STFTBlock(nn.HybridBlock):
 
 class ZScoreNormBlock(nn.HybridBlock):
     """Zero Score Normalization Block"""
+
     def __init__(self, in_channels, in_shapes, **kwargs):
         super().__init__(**kwargs)
         self._in_channels = in_channels
@@ -298,9 +300,39 @@ class MFCC(nn.HybridBlock):
 
 
 class MelSpectrogram(nn.HybridBlock):
-    def __init__(self, y=None, sr=16000, n_fft=2048, hop_length=512,
-                 power=2.0, **kwargs):
-        super().__init__(**kwargs)
+    """Compute a mel-scaled spectrogram.
 
-    def hybrid_forward(self, F, x, *args, **kwargs):
-        pass
+    Parameters
+    ----------
+    audio_length: int.
+        target audio length.
+    sr : number > 0 [scalar]
+        sampling rate of `audio`
+
+    n_fft : int > 0 [scalar]
+        length of the FFT window
+
+    hop_length : int > 0 [scalar]
+        number of samples between successive frames.
+        See `librosa.core.stft`
+
+    power : float > 0 [scalar]
+        Exponent for the magnitude melspectrogram.
+        e.g., 1 for energy, 2 for power, etc.
+
+    others : additional arguments
+      Mel filter bank parameters.
+      See `librosa.filters.mel` for details.
+
+    """
+
+    def __init__(self, audio_length, sr=16000, n_fft=2048, hop_length=512, power=2.0,
+                 n_mels=128, fmin=0.0, fmax=None, htk=False, norm=1, **kwargs):
+        super().__init__(**kwargs)
+        self.stft = STFTBlock(audio_length, n_fft, hop_length, power=power)
+        mel_basis = filters.mel(sr, n_fft, n_mels, fmin, fmax, htk, norm)[::, :1024].transpose((1, 0))
+        self.mel_basis = self.params.get_constant("mel_basis", mel_basis)
+
+    def hybrid_forward(self, F, x, mel_basis, *args, **kwargs):
+        spec = self.stft(x)
+        return F.transpose(F.dot(spec, mel_basis), axes=(0, 1, 3, 2))

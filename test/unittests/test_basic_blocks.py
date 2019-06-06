@@ -49,7 +49,7 @@ class TestSTFT(unittest.TestCase):
         spec = rosa.stft(x.asnumpy()[0], **self.stft_params)
         spec = np.abs(spec)[:int(self.stft_params["n_fft"] / 2), ::]
 
-        mx.test_utils.assert_almost_equal(gluon_spec, spec, rtol=1e-5, atol=1e-5)
+        mx.test_utils.assert_almost_equal(gluon_spec, spec, atol=1e-5)
 
 
 class TestDCT1D(unittest.TestCase):
@@ -71,4 +71,33 @@ class TestDCT1D(unittest.TestCase):
         gluon_ret = self.dct(x).asnumpy()
         scipy_ret = scipy.fftpack.dct(x.asnumpy())
 
-        np.testing.assert_almost_equal(gluon_ret, scipy_ret, decimal=4)
+        mx.test_utils.assert_almost_equal(gluon_ret, scipy_ret, atol=1e-4)
+
+
+class TestMelSpec(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.signal_length = 48000
+        cls.mel_params = {
+            "sr": 16000,
+            "n_fft": 2048,
+            "hop_length": 512,
+            "power": 2.0,
+            "n_mels": 128,
+            "fmin": 0.0,
+            "fmax": None,
+            "htk": False,
+            "norm": 1
+        }
+        cls.melspec = nn.MelSpectrogram(cls.signal_length, **cls.mel_params)
+        cls.melspec.initialize(ctx=mx.gpu(0))
+
+    def test_librosa_consistency(self):
+        x = mx.nd.random_uniform(-1, 1, shape=(1, self.signal_length), ctx=mx.gpu(0))
+        gluon_ret = self.melspec(x).asnumpy()[0][0]
+
+        rosa_ret = rosa.feature.melspectrogram(x.asnumpy()[0], **self.mel_params)
+        rosa_ret = np.abs(rosa_ret)[:int(self.mel_params["n_fft"] / 2), ::]
+
+        mx.test_utils.assert_almost_equal(gluon_ret, rosa_ret,  atol=1e-5)
