@@ -100,4 +100,55 @@ class TestMelSpec(unittest.TestCase):
         rosa_ret = rosa.feature.melspectrogram(x.asnumpy()[0], **self.mel_params)
         rosa_ret = np.abs(rosa_ret)[:int(self.mel_params["n_fft"] / 2), ::]
 
-        mx.test_utils.assert_almost_equal(gluon_ret, rosa_ret,  atol=1e-5)
+        mx.test_utils.assert_almost_equal(gluon_ret, rosa_ret, atol=1e-5)
+
+
+class TestPowerToDB(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.batch_size = 8
+        cls.power2db = nn.PowerToDB()
+        cls.power2db.initialize()
+
+    def test_librosa_consistency(self):
+        x = np.random.uniform(-1, 1, (self.batch_size, 16000))
+
+        specs = []
+        rosa_ret = []
+        for i in range(self.batch_size):
+            spec = rosa.feature.melspectrogram(x[i])
+            specs.append(spec)
+            rosa_ret.append(rosa.power_to_db(spec))
+
+        gluon_ret = self.power2db(mx.nd.array(specs)).asnumpy()
+
+        mx.test_utils.assert_almost_equal(gluon_ret, np.array(rosa_ret), atol=1e-20)
+
+
+class TestMFCC(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.signal_length = 48000
+        cls.mfcc_params = {
+            "sr": 16000,
+            "n_mfcc": 20,
+            "dct_type": 2,
+            "norm": None,
+            "n_fft": 2048,
+            "hop_length": 512,
+            "power": 2.0,
+            "n_mels": 128,
+            "fmin": 0.0,
+            "fmax": None
+        }
+        cls.mfcc = nn.MFCC(cls.signal_length, **cls.mfcc_params)
+        cls.mfcc.initialize(ctx=mx.gpu(0))
+
+    def test_librosa_consistency(self):
+        x = mx.nd.random_uniform(-1, 1, shape=(1, self.signal_length), ctx=mx.gpu(0))
+        rosa_ret = rosa.feature.mfcc(x.asnumpy()[0], **self.mfcc_params)
+        gluon_ret = self.mfcc(x).asnumpy()[0][0]
+
+        mx.test_utils.assert_almost_equal(gluon_ret, rosa_ret, atol=1e-5)

@@ -28,7 +28,8 @@ from librosa import filters
 from mxnet import init, nd
 from mxnet.gluon import nn
 
-__all__ = ["SincConv1D", "ZScoreNormBlock", "STFTBlock", "DCT1D", "MelSpectrogram", "MFCC"]
+__all__ = ["SincConv1D", "ZScoreNormBlock", "STFTBlock", "DCT1D", "MelSpectrogram", "MFCC",
+           "PowerToDB"]
 
 
 class SincConv1D(nn.HybridBlock):
@@ -286,19 +287,6 @@ class DCT1D(nn.HybridBlock):
         return 2 * F.dot(x, coef)
 
 
-class MFCC(nn.HybridBlock):
-    def __init__(self, sr=16000, n_mfcc=20, dct_type=2, norm='ortho', **kwargs):
-        super().__init__(**kwargs)
-        self.mel_spec = MelSpectrogram()
-        self.dct = DCT1D(type=dct_type, norm=norm)
-        self._n_mfcc = n_mfcc
-
-    def hybrid_forward(self, F, x, *args, **kwargs):
-        x = self.mel_spec(x)
-        x = self.dct(x)
-        return nd.slice()
-
-
 class MelSpectrogram(nn.HybridBlock):
     """Compute a mel-scaled spectrogram.
 
@@ -336,3 +324,63 @@ class MelSpectrogram(nn.HybridBlock):
     def hybrid_forward(self, F, x, mel_basis, *args, **kwargs):
         spec = self.stft(x)
         return F.transpose(F.dot(spec, mel_basis), axes=(0, 1, 3, 2))
+
+
+class PowerToDB(nn.HybridBlock):
+    """Convert a power spectrogram (amplitude squared) to decibel (dB) units.
+    This is modified from librosa.power_to_db, and make it be able to process
+    batch input.
+
+    Parameters
+    ----------
+
+    ref : float.
+        The amplitude `abs(S)` is scaled relative to `ref`:
+        `10 * log10(S / ref)`.
+
+    amin : float > 0 [scalar]
+        minimum threshold for `abs(S)` and `ref`
+
+    top_db : float >= 0 [scalar]
+        threshold the output at `top_db` below the peak:
+        ``max(10 * log10(S)) - top_db``
+
+    """
+
+    def __init__(self, ref=1.0, amin=1e-10, top_db=80.0, **kwargs):
+        super().__init__(**kwargs)
+        self.ref = ref
+        self.amin = amin
+        if top_db is not None:
+            if top_db < 0:
+                raise ValueError('top_db must be non-negative')
+
+        self.top_db = top_db
+        self.db_multiplier = float(10.0 * np.log10(np.maximum(self.amin, self.ref)))
+
+    def hybrid_forward(self, F, x, *args, **kwargs):
+        log_spec = 10.0 * F.log10(F.maximum(self.amin, x)) - self.db_multiplier
+
+        if self.top_db is not None:
+            log_spec = F.maximum(log_spec, F.reshape(F.max(F.flatten(log_spec), -1), (-1, 1, 1, 1)) - self.top_db)
+        return log_spec
+
+
+class MFCC(nn.HybridBlock):
+    """
+    TODO: add DOC, fix numerical precision problem.
+    """
+    def __init__(self, audio_length, sr=16000, n_mfcc=20, dct_type=2, norm='ortho',
+                 n_fft=2048, hop_length=512, power=2.0, n_mels=128, fmin=0.0, fmax=None, **kwargs):
+        super().__init__(**kwargs)
+
+        self.mel_spec = MelSpectrogram(audio_length, sr, n_fft, hop_length, power, n_mels, fmin, fmax)
+        self.power2db = PowerToDB()
+        self.dct = DCT1D(mode=dct_type, N=n_mels, norm=norm)
+        self._n_mfcc = n_mfcc
+
+    def hybrid_forward(self, F, x, *args, **kwargs):
+        x = self.mel_spec(x)
+        x = F.transpose(self.power2db(x), (0, 1, 3, 2))
+        x = F.transpose(self.dct(x), (0, 1, 3, 2))
+        return F.slice(x, begin=(None, None, 0, None), end=(None, None, self._n_mfcc, None))
