@@ -331,6 +331,9 @@ class PowerToDB(nn.HybridBlock):
     This is modified from librosa.power_to_db, and make it be able to process
     batch input.
 
+    For input shape of (batch, channel, w, h) or (batch, w, h), this block will
+    compute power to db along last 2 axis.
+
     Parameters
     ----------
 
@@ -359,10 +362,10 @@ class PowerToDB(nn.HybridBlock):
         self.db_multiplier = float(10.0 * np.log10(np.maximum(self.amin, self.ref)))
 
     def hybrid_forward(self, F, x, *args, **kwargs):
-        log_spec = 10.0 * F.log10(F.maximum(self.amin, x)) - self.db_multiplier
+        log_spec = 10.0 * F.log10(F.broadcast_maximum(self.amin, x)) - self.db_multiplier
 
         if self.top_db is not None:
-            log_spec = F.maximum(log_spec, F.reshape(F.max(F.flatten(log_spec), -1), (-1, 1, 1, 1)) - self.top_db)
+            log_spec = F.broadcast_maximum(log_spec, F.max(log_spec, axis=(-2, -1), keepdims=True) - self.top_db)
         return log_spec
 
 
@@ -370,6 +373,7 @@ class MFCC(nn.HybridBlock):
     """
     TODO: add DOC, fix numerical precision problem.
     """
+
     def __init__(self, audio_length, sr=16000, n_mfcc=20, dct_type=2, norm='ortho',
                  n_fft=2048, hop_length=512, power=2.0, n_mels=128, fmin=0.0, fmax=None, **kwargs):
         super().__init__(**kwargs)
