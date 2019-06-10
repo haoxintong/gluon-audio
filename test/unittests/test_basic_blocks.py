@@ -11,7 +11,15 @@ import librosa as rosa
 from gluonar import nn
 
 
-class TestSTFT(unittest.TestCase):
+class UnittestBase(unittest.TestCase):
+    def test_librosa_consistency(self, active=False):
+        """Base class for Block Tests, this should be always success."""
+
+    def test_hybridize_forward(self):
+        self.test_librosa_consistency(active=True)
+
+
+class TestSTFT(UnittestBase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.stft_params = {
@@ -42,7 +50,8 @@ class TestSTFT(unittest.TestCase):
         self.assertTrue(isinstance(spec, mx.nd.NDArray))
         self.assertEqual(spec.shape, (batch_size, 1, num_frames, int(self.stft_params["n_fft"] / 2)))
 
-    def test_librosa_consistency(self):
+    def test_librosa_consistency(self, active=False):
+        self.stft.hybridize(active)
         x = mx.nd.random_uniform(-1, 1, shape=(1, self.audio_length), ctx=mx.gpu(0))
         gluon_spec = self.stft(x).asnumpy()[0][0].transpose((1, 0))
 
@@ -52,7 +61,7 @@ class TestSTFT(unittest.TestCase):
         mx.test_utils.assert_almost_equal(gluon_spec, spec, atol=1e-5)
 
 
-class TestDCT1D(unittest.TestCase):
+class TestDCT1D(UnittestBase):
     """
     Here we can only get a desired precision of 1e-4.
     """
@@ -63,7 +72,8 @@ class TestDCT1D(unittest.TestCase):
         cls.dct = nn.DCT1D(N=cls.signal_length)
         cls.dct.initialize(ctx=mx.gpu(0))
 
-    def test_librosa_consistency(self):
+    def test_librosa_consistency(self, active=False):
+        self.dct.hybridize(active)
         dim = np.random.randint(1, 5)
         shape = np.random.randint(1, 10, size=(dim,))
         x = mx.nd.random_uniform(-1, 1, shape=(*shape, self.signal_length), ctx=mx.gpu(0))
@@ -74,7 +84,7 @@ class TestDCT1D(unittest.TestCase):
         mx.test_utils.assert_almost_equal(gluon_ret, scipy_ret, atol=1e-4)
 
 
-class TestMelSpec(unittest.TestCase):
+class TestMelSpec(UnittestBase):
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -93,7 +103,8 @@ class TestMelSpec(unittest.TestCase):
         cls.melspec = nn.MelSpectrogram(cls.signal_length, **cls.mel_params)
         cls.melspec.initialize(ctx=mx.gpu(0))
 
-    def test_librosa_consistency(self):
+    def test_librosa_consistency(self, active=False):
+        self.melspec.hybridize(active)
         x = mx.nd.random_uniform(-1, 1, shape=(1, self.signal_length), ctx=mx.gpu(0))
         gluon_ret = self.melspec(x).asnumpy()[0][0]
 
@@ -103,7 +114,7 @@ class TestMelSpec(unittest.TestCase):
         mx.test_utils.assert_almost_equal(gluon_ret, rosa_ret, atol=1e-5)
 
 
-class TestPowerToDB(unittest.TestCase):
+class TestPowerToDB(UnittestBase):
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -111,7 +122,8 @@ class TestPowerToDB(unittest.TestCase):
         cls.power2db = nn.PowerToDB()
         cls.power2db.initialize()
 
-    def test_librosa_consistency(self):
+    def test_librosa_consistency(self, active=False):
+        self.power2db.hybridize(active)
         x = np.random.uniform(-1, 1, (self.batch_size, 16000))
 
         specs = []
@@ -126,7 +138,7 @@ class TestPowerToDB(unittest.TestCase):
         mx.test_utils.assert_almost_equal(gluon_ret, np.array(rosa_ret), atol=1e-20)
 
 
-class TestMFCC(unittest.TestCase):
+class TestMFCC(UnittestBase):
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -146,7 +158,8 @@ class TestMFCC(unittest.TestCase):
         cls.mfcc = nn.MFCC(cls.signal_length, **cls.mfcc_params)
         cls.mfcc.initialize(ctx=mx.gpu(0))
 
-    def test_librosa_consistency(self):
+    def test_librosa_consistency(self, active=False):
+        self.mfcc.hybridize(active)
         x = mx.nd.random_uniform(-1, 1, shape=(1, self.signal_length), ctx=mx.gpu(0))
         rosa_ret = rosa.feature.mfcc(x.asnumpy()[0], **self.mfcc_params)
         gluon_ret = self.mfcc(x).asnumpy()[0][0]
