@@ -11,6 +11,7 @@ GluonAR is based on MXnet-Gluon, if you are new to it, please check out [dmlc 60
 - 使用ffmpeg的pythonic binding `av`和`librosa`做audio数据读取
 - 模块支持`Hybridize()`. forward阶段不使用pysound, librosa, scipy, 效率更高, 提供快速训练和end-to-end部署的能力, 包括:
     - 基于`nd.contrib.fft`的短时傅里叶变换(`STFTBlock`)和z-score block, 相比使用numpy和scipy预处理后载入GPU训练效率提高12%.
+    - `MelSpectrogram`, `DCT1D`, `MFCC`, `PowerToDB`
     - [1808.00158](https://arxiv.org/abs/1808.00158)中提出的`SincBlock`
 - gluon风格的VOX数据集载入
 - 类似人脸验证的Speaker Verification
