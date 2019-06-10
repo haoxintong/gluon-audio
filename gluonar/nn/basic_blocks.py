@@ -362,7 +362,7 @@ class PowerToDB(nn.HybridBlock):
         self.db_multiplier = float(10.0 * np.log10(np.maximum(self.amin, self.ref)))
 
     def hybrid_forward(self, F, x, *args, **kwargs):
-        log_spec = 10.0 * F.log10(F.broadcast_maximum(self.amin, x)) - self.db_multiplier
+        log_spec = 10.0 * F.log10(F.maximum(self.amin, x)) - self.db_multiplier
 
         if self.top_db is not None:
             log_spec = F.broadcast_maximum(log_spec, F.max(log_spec, axis=(-2, -1), keepdims=True) - self.top_db)
