@@ -240,9 +240,6 @@ class DCT1D(nn.HybridBlock):
         Type of the DCT (see Notes). Default type is 2.
     N : int
         Length of the transform. The required value is ``N = x.shape[axis]``.
-    axis : int, optional
-        Axis along which the dct is computed; the default is over the
-        last axis (i.e., ``axis=-1``).
     norm : {None, 'ortho'}, optional
         Normalization mode (see Notes). Default is None.
 
@@ -265,7 +262,6 @@ class DCT1D(nn.HybridBlock):
     Which makes the corresponding matrix of coefficients orthonormal
     (``OO' = Id``).
 
-    TODO: implement the norm coef option.
     """
 
     def __init__(self, mode=2, N=None, norm=None, **kwargs):
@@ -281,10 +277,20 @@ class DCT1D(nn.HybridBlock):
                            np.arange(0, N, 1).reshape([1, N]))
         coef = np.cos(coef * np.pi)
 
-        self.coef = self.params.get_constant("coef", coef)
+        if norm is None:
+            factor = np.ones(shape=[1, N])
+        elif norm == "ortho":
+            factor = np.ones(shape=[1, N]) * np.sqrt(1 / (2 * N))
+            factor[0][0] = factor[0][0] * np.sqrt(0.5)
+        else:
+            raise NotImplementedError("Normalization mode {} is not supported.".format(norm))
 
-    def hybrid_forward(self, F, x, coef, *args, **kwargs):
-        return 2 * F.dot(x, coef)
+        self.coef = self.params.get_constant("coef", coef)
+        self.factor = self.params.get_constant("factor", factor)
+
+    def hybrid_forward(self, F, x, coef, factor, *args, **kwargs):
+        x = 2 * F.dot(x, coef)
+        return F.broadcast_mul(x, factor)
 
 
 class MelSpectrogram(nn.HybridBlock):

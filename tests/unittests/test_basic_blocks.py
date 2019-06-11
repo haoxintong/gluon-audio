@@ -69,7 +69,8 @@ class TestDCT1D(UnittestBase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.signal_length = 512
-        cls.dct = nn.DCT1D(N=cls.signal_length)
+        cls.norm = "ortho"
+        cls.dct = nn.DCT1D(N=cls.signal_length, norm=cls.norm)
         cls.dct.initialize(ctx=mx.gpu(0))
 
     def test_librosa_consistency(self, active=False):
@@ -79,7 +80,7 @@ class TestDCT1D(UnittestBase):
         x = mx.nd.random_uniform(-1, 1, shape=(*shape, self.signal_length), ctx=mx.gpu(0))
 
         gluon_ret = self.dct(x).asnumpy()
-        scipy_ret = scipy.fftpack.dct(x.asnumpy())
+        scipy_ret = scipy.fftpack.dct(x.asnumpy(), norm=self.norm)
 
         mx.test_utils.assert_almost_equal(gluon_ret, scipy_ret, atol=1e-4)
 
@@ -147,7 +148,7 @@ class TestMFCC(UnittestBase):
             "sr": 16000,
             "n_mfcc": 20,
             "dct_type": 2,
-            "norm": None,
+            "norm": "ortho",
             "n_fft": 2048,
             "hop_length": 512,
             "power": 2.0,
