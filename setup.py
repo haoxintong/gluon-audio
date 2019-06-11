@@ -9,8 +9,8 @@ from setuptools import setup, find_packages
 
 def read(*names, **kwargs):
     with io.open(
-        os.path.join(os.path.dirname(__file__), *names),
-        encoding=kwargs.get("encoding", "utf8")
+            os.path.join(os.path.dirname(__file__), *names),
+            encoding=kwargs.get("encoding", "utf8")
     ) as fp:
         return fp.read()
 
@@ -23,8 +23,10 @@ def find_version(*file_paths):
         return version_match.group(1)
     raise RuntimeError("Unable to find version string.")
 
+
 try:
     import pypandoc
+
     long_description = pypandoc.convert('README.md', 'rst')
 except(IOError, ImportError):
     long_description = open('README.md').read()
@@ -47,6 +49,7 @@ setup(
     name='gluonar',
     version=VERSION,
     author='haoxintong',
+    author_email="haoxintongpku@gmail.com",
     url='https://github.com/haoxintong/gluon-audio',
     description='Gluon Audio Toolkit',
     long_description=long_description,
