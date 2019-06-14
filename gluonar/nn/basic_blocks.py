@@ -120,11 +120,11 @@ class STFTBlock(nn.HybridBlock):
         - **x**: the input audio signal, with shape (batch_size, audio_length).
 
     Outputs:
-        - **specs**: specs tensor with shape (batch_size, 1, num_frames, win_lengths/2).
+        - **specs**: specs tensor with shape (batch_size, 1, num_frames, n_fft/2).
 
     Notes
     -----
-    The output shape is calculated by (1+(len(y)-n_fft)/hop_length, win_lengths/2),
+    The output shape is calculated by (1+(len(y)-n_fft)/hop_length, n_fft/2) when center is True,
     and different from librosa the output should be transposed before visualization.
     """
 
