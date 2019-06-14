@@ -23,7 +23,6 @@
 import os
 import warnings
 import numpy as np
-import librosa as rosa
 
 from mxnet import nd
 from mxnet.gluon.data import Dataset
@@ -56,14 +55,11 @@ format_scale = {
 
 
 def _load(path):
-    if path.lower().endswith(".wav"):
-        audio = rosa.load(path, sr=16000)[0]
-    else:
-        fin = container.open(path)
-        audio_frames = [frame for frame in fin.decode()]
-        audios = list(map(lambda x: np.frombuffer(x.planes[0], format_dtypes[x.format.name],
-                                                  x.samples), audio_frames))
-        audio = np.concatenate(audios, axis=0)
+    fin = container.open(path)
+    audio_frames = [frame for frame in fin.decode()]
+    audios = list(map(lambda x: np.frombuffer(x.planes[0], format_dtypes[x.format.name],
+                                              x.samples), audio_frames))
+    audio = np.concatenate(audios, axis=0)
     return nd.array(audio)
 
 
