@@ -21,20 +21,23 @@
 # SOFTWARE.
 """"""
 from mxnet.gluon import nn
-from ..nn.basic_blocks import STFTBlock, ZScoreNormBlock, FrBase
 from mxnet.gluon.model_zoo.vision import get_resnet
+from gluonfr.nn.basic_blocks import FrBase
+
+from ..nn.basic_blocks import STFTBlock, ZScoreNormBlock
 
 
 class ResNetSR(FrBase):
-    def __init__(self, classes, num_layers, weight_norm=False,
-                 feature_norm=False, embedding_size=128, need_cls_layer=True, **kwargs):
+    def __init__(self, classes, num_layers, audio_length, n_fft=2048, hop_length=None, win_length=None,
+                 weight_norm=False, feature_norm=False, embedding_size=128, need_cls_layer=True, **kwargs):
         super().__init__(classes, embedding_size, weight_norm,
                          feature_norm, need_cls_layer, **kwargs)
+        spec_shape = (1 + int(audio_length / hop_length), int(n_fft / 2))
         with self.name_scope():
             self.features = nn.HybridSequential(prefix='feature_')
             with self.features.name_scope():
-                self.features.add(STFTBlock(2.24, n_fft=224 * 2),
-                                  ZScoreNormBlock(1, (224, 224)),
+                self.features.add(STFTBlock(audio_length, n_fft, hop_length, win_length),
+                                  ZScoreNormBlock(1, spec_shape),
                                   nn.Activation("sigmoid"))
                 self.features.add(get_resnet(2, num_layers, classes=embedding_size))
                 self.features.add(nn.Dense(embedding_size, use_bias=False),
