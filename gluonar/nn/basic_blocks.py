@@ -91,7 +91,6 @@ class SincConv1D(nn.HybridBlock):
         return F.concat(y_left, F.ones((self._channels, 1)), y_right, dim=1)
 
     def hybrid_forward(self, F, x, f1, f2, window, t_right_2_pi, *args, **kwargs):
-        # 本质上在构造带通滤波器, 利用逆向傅里叶变换在时域进行分析, 两个可学习参数表示高低截断频率
 
         f1 = F.abs(f1) + self._min_freq / self._sr
         f2 = f1 + (F.abs(f2) + self._min_band / self._sr)
@@ -116,15 +115,41 @@ class STFTBlock(nn.HybridBlock):
     audio_length: int.
         target audio length.
 
-    Inputs:
-        - **x**: the input audio signal, with shape (batch_size, audio_length).
+    n_fft : int > 0 [scalar]
+        length of the FFT window
 
-    Outputs:
-        - **specs**: specs tensor with shape (batch_size, 1, num_frames, n_fft/2).
+    hop_length : int > 0 [scalar]
+        number of samples between successive frames.
+        See `librosa.core.stft`
+
+    win_length : int <= n_fft [scalar]
+        Each frame of audio is windowed by `window()`.
+        The window will be of length `win_length` and then padded
+        with zeros to match `n_fft`.
+        If unspecified, defaults to ``win_length = n_fft``.
+
+    window : string [shape=(n_fft,)]
+        A window specification (string, tuple, or number), see `scipy.signal.get_window`
+
+    center : boolean
+        If `True`, the signal `y` is padded so that frame `D[:, t]` is centered at `y[t * hop_length]`.
+        If `False`, then `D[:, t]` begins at `y[t * hop_length]`
+
+    power : float > 0 [scalar]
+        Exponent for the magnitude melspectrogram.
+        e.g., 1 for energy, 2 for power, etc.
+
+
+    - Inputs:
+        - **x**: the input audio signal, with shape ``(batch_size, audio_length)``.
+
+
+    - Outputs:
+        - **specs**: specs tensor with shape ``(batch_size, 1, num_frames, n_fft/2)``.
 
     Notes
     -----
-    The output shape is calculated by (1+(len(y)-n_fft)/hop_length, n_fft/2) when center is True,
+    The num_frames is calculated by ``1+(len(y)-n_fft)/hop_length`` when center is True,
     and different from librosa the output should be transposed before visualization.
     """
 
@@ -173,29 +198,20 @@ class STFTBlock(nn.HybridBlock):
         return F.expand_dims(specs, axis=1)
 
     def pad(self, F, x):
-        """As mxnet nd.pad only support 4D or 5D arrays, it should be reshaped first."""
+        # As mxnet nd.pad only support 4D or 5D arrays, it should be reshaped first.
         x_4d = F.reshape(x, shape=(1, 1, -1, self._audio_length))
         x_4d = F.pad(x_4d, mode="reflect", pad_width=(0, 0, 0, 0, 0, 0, int(self._n_fft // 2), int(self._n_fft // 2)))
         return F.reshape(x_4d, shape=(-1, self._audio_length + int(self._n_fft // 2 * 2)))
 
     @staticmethod
     def abs_complex(F, x, axis):
-        """Calculate the absolute value element-wise along given axis."""
+        # Calculate the absolute value element-wise along given axis.
         return F.sqrt(F.sum(F.square(x), axis=axis))
 
     @staticmethod
     def pad_center(data, size, axis=-1, **kwargs):
-        """Wrapper for np.pad to automatically center an array prior to padding.
-        This is analogous to `str.center()`
-
-        Parameters
-        ----------
-        data : np.ndarray
-            Vector to be padded and centered
-
-        size : int >= len(data) [scalar]
-            Length to pad `data`
-        """
+        # Wrapper for np.pad to automatically center an array prior to padding.
+        # This is analogous to `str.center()`
 
         kwargs.setdefault('mode', 'constant')
         n = data.shape[axis]
@@ -236,11 +252,13 @@ class DCT1D(nn.HybridBlock):
 
     Parameters
     ----------
-    mode : {1, 2, 3}, optional
+    mode: {1, 2, 3}, optional.
         Type of the DCT (see Notes). Default type is 2.
-    N : int
+
+    N: int.
         Length of the transform. The required value is ``N = x.shape[axis]``.
-    norm : {None, 'ortho'}, optional
+
+    norm: {None, 'ortho'}, optional.
         Normalization mode (see Notes). Default is None.
 
     Notes
@@ -300,21 +318,22 @@ class MelSpectrogram(nn.HybridBlock):
     ----------
     audio_length: int.
         target audio length.
-    sr : number > 0 [scalar]
+
+    sr: number > 0 [scalar]
         sampling rate of `audio`
 
-    n_fft : int > 0 [scalar]
+    n_fft: int > 0 [scalar]
         length of the FFT window
 
-    hop_length : int > 0 [scalar]
+    hop_length: int > 0 [scalar]
         number of samples between successive frames.
         See `librosa.core.stft`
 
-    power : float > 0 [scalar]
+    power: float > 0 [scalar]
         Exponent for the magnitude melspectrogram.
         e.g., 1 for energy, 2 for power, etc.
 
-    others : additional arguments
+    others: additional arguments
       Mel filter bank parameters.
       See `librosa.filters.mel` for details.
 
@@ -333,7 +352,7 @@ class MelSpectrogram(nn.HybridBlock):
 
 
 class PowerToDB(nn.HybridBlock):
-    """Convert a power spectrogram (amplitude squared) to decibel (dB) units.
+    r"""Convert a power spectrogram (amplitude squared) to decibel (dB) units.
     This is modified from librosa.power_to_db, and make it be able to process
     batch input.
 
@@ -376,8 +395,33 @@ class PowerToDB(nn.HybridBlock):
 
 
 class MFCC(nn.HybridBlock):
-    """
-    TODO: add DOC, fix numerical precision problem.
+    r"""Mel-frequency cepstral coefficients (MFCCs)
+
+    Parameters
+    ----------
+    audio_length: int.
+        target audio length.
+
+    sr    : number > 0 [scalar]
+        sampling rate of `y`
+
+    n_mfcc: int > 0 [scalar]
+        number of MFCCs to return
+
+    dct_type : None, or {1, 2, 3}
+        Discrete cosine transform (DCT) type.
+        Now only DCT type-2 is used.
+
+    norm : None or 'ortho'
+        If `dct_type` is `2 or 3`, setting `norm='ortho'` uses an ortho-normal
+        DCT basis.
+        Normalization is not supported for `dct_type=1`.
+
+    See Also
+    --------
+    librosa.melspectrogram
+    scipy.fftpack.dct
+
     """
 
     def __init__(self, audio_length, sr=16000, n_mfcc=20, dct_type=2, norm='ortho',
