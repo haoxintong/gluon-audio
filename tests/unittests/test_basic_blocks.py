@@ -166,3 +166,22 @@ class TestMFCC(UnittestBase):
         gluon_ret = self.mfcc(x).asnumpy()[0][0]
 
         mx.test_utils.assert_almost_equal(gluon_ret, rosa_ret, atol=1e-5)
+
+
+class TestZeroScore(UnittestBase):
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.shapes = (64, 64)
+        cls.zero_score = nn.ZScoreNormBlock(1, cls.shapes)
+        cls.zero_score.initialize()
+
+    def test_numpy_consistency(self):
+        def np_zero_score_norm(x):
+            return (x - np.mean(x, axis=(-2, -1), keepdims=True))/np.std(x, axis=(-2, -1), keepdims=True)
+
+        x = mx.nd.random_uniform(-1, 1, shape=(2, 1, *self.shapes))
+        gluon_ret = self.zero_score(x).asnumpy()
+        np_ret = np_zero_score_norm(x.asnumpy())
+
+        mx.test_utils.assert_almost_equal(gluon_ret, np_ret, atol=1e-5)
