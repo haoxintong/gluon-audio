@@ -22,8 +22,19 @@ import sys
 import re
 import io
 import sphinx_rtd_theme
+from unittest.mock import MagicMock
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+
+
+class Mock(MagicMock):
+    @classmethod
+    def __getattr__(cls, name):
+        return MagicMock()
+
+
+MOCK_MODULES = ['mxnet', 'av']
+sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 
 def read(*names, **kwargs):
