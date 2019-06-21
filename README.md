@@ -1,4 +1,6 @@
 # Gluon Audio Toolkit
+[![Documentation Status](https://readthedocs.org/projects/gluon-audio/badge/?version=latest)](https://gluon-audio.readthedocs.io/en/latest/?badge=latest)
+
 Gluon Audio is a toolkit providing deep learning based audio recognition algorithm. 
 The project is still under development, and only Chinese introduction will be provided.
 
@@ -103,7 +105,7 @@ the differences between them:
 接下来会慢慢补全使用mxnet gluon训练说话人识别的工具链, 预计会花超长时间. 
 
 ## Docs
-GluonAR documentation is not available now. 
+Please checkout http://gluon-audio.readthedocs.io/ . 
 
 ## Authors
 { [haoxintong](https://github.com/haoxintong) }
