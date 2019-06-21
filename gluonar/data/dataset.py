@@ -26,8 +26,23 @@ import numpy as np
 
 from mxnet import nd
 from mxnet.gluon.data import Dataset
+try:
+    from av import container
 
-from av import container
+    def _load(path):
+        fin = container.open(path)
+        audio_frames = [frame for frame in fin.decode()]
+        audios = list(map(lambda x: np.frombuffer(x.planes[0], format_dtypes[x.format.name],
+                                                  x.samples), audio_frames))
+        audio = np.concatenate(audios, axis=0)
+        return nd.array(audio)
+
+except ImportError:
+    import librosa as rosa
+
+    def _load(path):
+        audio = rosa.load(path, sr=16000)[0]
+        return nd.array(audio)
 
 __all__ = ["VoxAudioFolderDataset", "VoxAudioValFolderDataset"]
 
@@ -52,15 +67,6 @@ format_scale = {
     's32': 2 ** 31,
     's32p': 2 ** 31
 }
-
-
-def _load(path):
-    fin = container.open(path)
-    audio_frames = [frame for frame in fin.decode()]
-    audios = list(map(lambda x: np.frombuffer(x.planes[0], format_dtypes[x.format.name],
-                                              x.samples), audio_frames))
-    audio = np.concatenate(audios, axis=0)
-    return nd.array(audio)
 
 
 class VoxAudioFolderDataset(Dataset):
