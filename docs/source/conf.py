@@ -22,20 +22,25 @@ import sys
 import re
 import io
 import sphinx_rtd_theme
-from unittest.mock import MagicMock
+# from unittest.mock import MagicMock
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
-
-class Mock(MagicMock):
-    @classmethod
-    def __getattr__(cls, name):
-        return MagicMock()
-
-
-MOCK_MODULES = ['av', 'mxnet', 'mxnet.gluon', 'mxnet.gluon.loss', 'mxnet.gluon.nn', 'mxnet.gluon.model_zoo.vision',
-                'mxnet.gluon.data', 'gluonfr', 'gluonfr.metrics.verification']
-sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
+#
+# class Mock(MagicMock):
+#     """ This is Mock of Conf"""
+#
+#     @classmethod
+#     def __getattr__(cls, name):
+#         if name == '__doc__':
+#             return getattr(cls, "__doc__")
+#         return MagicMock()
+#
+#     # def __setattr__(self, name, value):
+#     #     super(MagicMock, self).__setattr__(name, value)
+# MOCK_MODULES = ['av', 'mxnet', 'mxnet.gluon', 'mxnet.gluon.loss', 'mxnet.gluon.nn', 'mxnet.gluon.model_zoo.vision',
+#                 'mxnet.gluon.data', 'gluonfr', 'gluonfr.metrics.verification']
+# sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 
 def read(*names, **kwargs):

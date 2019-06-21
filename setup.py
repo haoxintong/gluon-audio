@@ -34,13 +34,14 @@ except(IOError, ImportError):
 VERSION = find_version('gluonar', '__init__.py')
 
 requirements = [
-    'numpy',
+    'numpy==1.15.3',
     'tqdm',
     'requests',
     'matplotlib',
     'seaborn',
     'scipy',
-    'librosa'
+    'librosa',
+    'mxnet'
 ]
 
 setup(
