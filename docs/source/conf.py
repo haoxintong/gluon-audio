@@ -34,7 +34,7 @@ class Mock(MagicMock):
 
 
 MOCK_MODULES = ['av', 'mxnet', 'mxnet.gluon', 'mxnet.gluon.loss', 'mxnet.gluon.nn', 'mxnet.gluon.model_zoo.vision',
-                'gluonfr', 'gluonfr.metrics.verification']
+                'mxnet.gluon.data', 'gluonfr', 'gluonfr.metrics.verification']
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 
