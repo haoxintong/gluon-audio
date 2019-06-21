@@ -40,7 +40,7 @@ requirements = [
     'matplotlib',
     'seaborn',
     'scipy',
-    'av',
+    'mxnet',
     'librosa'
 ]
 
