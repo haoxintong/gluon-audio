@@ -21,24 +21,6 @@
 # SOFTWARE.
 """GluonAR: a deep learning audio recognition toolkit powered by Gluon."""
 
-import warnings
-
-# mxnet version check
-mx_version = '1.5.0'
-try:
-    import mxnet as mx
-    from distutils.version import LooseVersion
-
-    if LooseVersion(mx.__version__) < LooseVersion(mx_version):
-        msg = (
-            "Legacy mxnet=={} detected, some new modules may not work properly. "
-            "mxnet>={} is required. You can use pip to upgrade mxnet "
-            "`pip install mxnet/mxnet-cu92 --pre --upgrade`").format(mx.__version__, mx_version)
-        raise ImportError(msg)
-except ImportError:
-    warnings.warn("Unable to import dependency mxnet. "
-                  "A quick tip is to install via `pip install mxnet/mxnet-cu92 --pre`. ")
-
 __version__ = '0.1.0'
 
 from . import data
