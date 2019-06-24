@@ -7,7 +7,7 @@ import numpy as np
 from mxnet import nd
 from mxnet.gluon.loss import SoftmaxCrossEntropyLoss
 
-__all__ = ["get_loss", "SoftmaxCrossEntropyLoss", "ArcLoss", "RingLoss",
+__all__ = ["get_loss", "ArcLoss", "RingLoss",
            ]
 numeric_types = (float, int, np.generic)
 
@@ -158,12 +158,14 @@ _losses = {
 
 def get_loss(name, **kwargs):
     """
+
     Parameters
     ----------
     name : str
-        Name
+        Loss name, check gluonar.loss for details.
     kwargs : str
         Params
+
     Returns
     -------
     HybridBlock

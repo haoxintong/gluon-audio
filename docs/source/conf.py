@@ -22,25 +22,42 @@ import sys
 import re
 import io
 import sphinx_rtd_theme
-# from unittest.mock import MagicMock
+from unittest.mock import MagicMock
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
-#
-# class Mock(MagicMock):
-#     """ This is Mock of Conf"""
-#
-#     @classmethod
-#     def __getattr__(cls, name):
-#         if name == '__doc__':
-#             return getattr(cls, "__doc__")
-#         return MagicMock()
-#
-#     # def __setattr__(self, name, value):
-#     #     super(MagicMock, self).__setattr__(name, value)
-# MOCK_MODULES = ['av', 'mxnet', 'mxnet.gluon', 'mxnet.gluon.loss', 'mxnet.gluon.nn', 'mxnet.gluon.model_zoo.vision',
-#                 'mxnet.gluon.data', 'gluonfr', 'gluonfr.metrics.verification']
-# sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
+
+class MagicBase(MagicMock):
+    @property
+    def __doc__(self):
+        return self.return_value["__doc__"]
+
+    @property
+    def __class__(self):
+        return type
+
+    @property
+    def __bases__(self):
+        return MagicMock.__bases__
+
+    @property
+    def __name__(self):
+        return self.return_value["__qualname__"]
+
+    @property
+    def __mro__(self):
+        return self.__class__, object
+
+
+class Magic(MagicBase):
+    @classmethod
+    def __getattr__(cls, name):
+        return MagicBase()
+
+
+MOCK_MODULES = ['av', 'mxnet', 'mxnet.gluon', 'mxnet.gluon.loss', 'mxnet.gluon.nn', 'mxnet.gluon.model_zoo.vision',
+                'mxnet.gluon.data', 'gluonfr', 'gluonfr.metrics.verification']
+sys.modules.update((mod_name, Magic()) for mod_name in MOCK_MODULES)
 
 
 def read(*names, **kwargs):
@@ -94,7 +111,7 @@ source_suffix = ['.rst', '.md']
 # source_suffix = {
 #     '.rst': 'restructuredtext',
 #     '.txt': 'markdown',
-    # '.md': 'markdown',
+#     '.md': 'markdown',
 # }
 
 # The encoding of source files.
@@ -169,7 +186,6 @@ pygments_style = 'sphinx'
 
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = False
-
 
 # -- Options for HTML output ----------------------------------------------
 
@@ -299,21 +315,21 @@ htmlhelp_basename = 'GluonARdoc'
 # -- Options for LaTeX output ---------------------------------------------
 
 latex_elements = {
-     # The paper size ('letterpaper' or 'a4paper').
-     #
-     # 'papersize': 'letterpaper',
+    # The paper size ('letterpaper' or 'a4paper').
+    #
+    # 'papersize': 'letterpaper',
 
-     # The font size ('10pt', '11pt' or '12pt').
-     #
-     # 'pointsize': '10pt',
+    # The font size ('10pt', '11pt' or '12pt').
+    #
+    # 'pointsize': '10pt',
 
-     # Additional stuff for the LaTeX preamble.
-     #
-     # 'preamble': '',
+    # Additional stuff for the LaTeX preamble.
+    #
+    # 'preamble': '',
 
-     # Latex figure (float) alignment
-     #
-     # 'figure_align': 'htbp',
+    # Latex figure (float) alignment
+    #
+    # 'figure_align': 'htbp',
 }
 
 # Grouping the document tree into LaTeX files. List of tuples
