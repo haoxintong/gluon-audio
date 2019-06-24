@@ -22,12 +22,12 @@ import sys
 import re
 import io
 import sphinx_rtd_theme
-from unittest.mock import MagicMock
+from unittest.mock import Mock
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
 
-class MagicBase(MagicMock):
+class MagicBase(Mock):
     @property
     def __doc__(self):
         return self.return_value["__doc__"]
@@ -38,7 +38,7 @@ class MagicBase(MagicMock):
 
     @property
     def __bases__(self):
-        return MagicMock.__bases__
+        return Mock.__bases__
 
     @property
     def __name__(self):
