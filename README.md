@@ -1,5 +1,5 @@
 # Gluon Audio Toolkit
-[![Documentation Status](https://readthedocs.org/projects/gluon-audio/badge/?version=latest)](https://gluon-audio.readthedocs.io/en/latest/?badge=latest)
+[![Documentation Status](https://readthedocs.org/projects/gluon-audio/badge/?version=latest)](https://gluon-audio.readthedocs.io/?badge=latest)
 
 Gluon Audio is a toolkit providing deep learning based audio recognition algorithm. 
 The project is still under development, and only Chinese introduction will be provided.
